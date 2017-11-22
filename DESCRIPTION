@@ -1,0 +1,19 @@
+Package: pmut
+Type: Package
+Title: Predictive Modeling Utility-function Toolkit
+Version: 0.1.0
+Authors: Chengjun Hou
+Maintainer: Chengjun Hou <chengjun.hou@gmail.com>
+Description: A collection of utility functions that facilitate general predictive modeling work. 
+    Function usages include but not limited to diagnostic visualization, data preparation, and
+    model metrics. If you have any feedback, or any function you want to have in the package, 
+    please contact the package maintainer.
+Depends: R (>= 3.1.0)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+  data.table,
+  ggplot2,
+  gridExtra
+RoxygenNote: 6.0.1
