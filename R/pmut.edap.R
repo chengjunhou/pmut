@@ -43,25 +43,22 @@ pmut.edap <- function(datatable, varvec, targetstring, meta=c(50,4,0.01,0.99), q
 
     ### feature valid
     } else {
-      ## discrete feature
+      ## categorical feature
       if (Class[1] %in% c("character","factor","logical","ordered")) {
         pmut.edap.disc(datatable, varvec[i], targetstring, pred.df)
-      ## continuous feature
-      } else if (Class[1] == "numeric") {
-        pmut.edap.cont(datatable, varvec[i], targetstring, meta, qbin, pred.df)
-      } else if (Class[1] == "integer") {
-        # integer feature as discrete
+      ## numerical feature
+      } else if (Class[1] %in% c("numeric", "integer")) {
+        # num feature as discrete
         if (length(unique(datatable[[varvec[i]]])) <= meta[1]) {
-          datatable[[varvec[i]]] = as.character(datatable[[varvec[i]]])
           pmut.edap.disc(datatable, varvec[i], targetstring, pred.df)
-        # integer feature as continuous
+          # num feature as continuous
         } else {
           pmut.edap.cont(datatable, varvec[i], targetstring, meta, qbin, pred.df)
         }
-      ## other rare class feature
       } else {
         cat("Error", i, varvec[i], ": check feature class", "\n")
       }
+
       cat("Loop", i, varvec[i], ":", Class, "\n")
     }
   }
