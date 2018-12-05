@@ -1,11 +1,9 @@
 .onAttach <- function(libname = find.package("pmut"),
                       pkgname = "pmut") {
 
+  library(ggplot2)
   packageStartupMessage(
-    "Loading required package: data.table"
-  )
-  packageStartupMessage(
-    "Loading required package: ggplot2"
+    "Loading and attaching required package: ggplot2"
   )
 
 }
