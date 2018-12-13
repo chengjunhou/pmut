@@ -4,14 +4,14 @@
 #'
 #' @param DATA Object of class \code{data.frame} or \code{data.table}
 #' @return A named bool vector indicating whether the column is duplicated
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
-#' plds.data.same(data.frame(ggplot2::diamonds))
+#' pmut.data.same(data.frame(ggplot2::diamonds))
 
 
-plds.data.same <- function(DATA) {
+pmut.data.same <- function(DATA) {
   boolvec = duplicated(as.list(DATA))
   names(boolvec) = names(DATA)
   return(boolvec)
