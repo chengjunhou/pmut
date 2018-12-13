@@ -4,7 +4,8 @@
 .Ruserdata
 
 ### File ###
-.pdf
+*.pdf
+*.html
 
 ### Folder ###
-doc/
+doc/rsconnect/

@@ -1,0 +1,264 @@
+---
+title: "Introduction to Package pmut"
+author: "Chengjun Hou"
+date: "Dec 20, 2017"
+output:
+  html_document:
+    theme: cosmo
+---
+
+```{r setup, include=FALSE}
+library(pmut)
+library(data.table)
+library(ggplot2)
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7)
+```
+
+
+
+---------------
+
+This package is a collection of utility functions that facilitate general predictive modeling work. 
+Function usages include but not limited to diagnostic visualization, model metric, data quality check. 
+If you have any feedback, or any function you want to have in the package, please reach out to 
+<chengjun.hou@gmail.com> or connect via GitHub.
+
+To install the package, use the following command in R:
+
+```{r, eval=FALSE}
+devtools::install_github("chengjunhou/pmut")
+```
+
+---------------
+
+- [Diagnostic Visualization](#dgvis)
+- [Model Metric](#metrc)
+- [Data Preparation for Scoring](#score)
+- [Simple Quality Check](#check)
+
+---------------
+
+
+
+## Diagnostic Visualization {#dgvis}
+
+### pmut.edap.disc
+
+This function creates a visualization for a line plot of one discrete feature against the response, 
+plus a distribution histogram for that discrete feature. 
+In the line plot, the discrete feature will be the x-axis while the response be the y-axis, 
+which will serve as Actual. NA will be formed as its own level. 
+More lines of Prediction can be created by inputting a prediction `data.frame`.
+
+`pmut.edap.disc(datatable, varstring, targetstring, pred.df=NULL)`
+
+- **param** datatable: Object of class `data.frame` or `data.table`
+- **param** varstring: Single character string indicating the column name inside `datatable` for the discrete feature
+- **param** targetstring: Single character string indicating the column name inside `datatable` for the response
+- **param** pred.df: Object of class `data.frame` (optional), with column being prediction from each model
+- **return**: A view of line plot stacked above the histogram 
+
+We use the diamond dataset from `ggplot2` to do the demo:
+
+```{r}
+df = data.frame(ggplot2::diamonds)
+pmut.edap.disc(df, "color", "price", pred.df=data.frame(GLM=rnorm(dim(df)[1],4000,5000)))
+```
+
+
+### pmut.edap.cont
+
+This function creates a visualization for a line plot of one continuous feature against the response, 
+plus a distribution histogram for that continuous feature. 
+In the line plot, the continuous feature will be cut into bins and then placed on the x-axis. The response will be the y-axis, 
+which will serve as Actual. Binning characteristics will be controlled by `meta` and `qbin`. NA will be formed as its own bin. 
+More lines of Prediction can be created by inputting a prediction `data.frame`.
+
+`pmut.edap.cont(datatable, varstring, targetstring, meta=c(50,4,0.01,0.99), qbin=FALSE, pred.df=NULL)`
+
+- **param** datatable: Object of class `data.frame` or `data.table`
+- **param** varstring: Single character string indicating the column name inside `datatable` for the discrete feature
+- **param** targetstring: Single character string indicating the column name inside `datatable` for the response
+- **param** meta: Numeric vector with length of 4 (default is c(50,4,0.01,0.99)): 1st indicates number of bins, 
+  2nd indicates bin rounding digits, 3rd and 4th indicate the outlier percentile
+- **param** qbin: Logical (default is FALSE), FALSE indicates equal length bins, TRUE indicates equal weight bins (quantile view)
+- **param** pred.df: Object of class `data.frame` (optional), with column being prediction from each model
+- **return**: A view of line plot stacked above the histogram 
+
+Note that the first bin in the following view is ranging from the minimum of "carat" to its 1% percentile (`meta[3]=0.01`),
+while the last bin is ranging from 99% percentile to the maximum of "carat" (`meta[4]=0.99`).
+
+```{r}
+pmut.edap.cont(df, "carat", "price", pred.df=data.frame(GLM1=rnorm(dim(df)[1],4000,5000),
+                                                        GLM2=rnorm(dim(df)[1],2000,5000)))
+```
+
+Note that in the following quantile view, since we specify the outlier percentile to be 0% (`meta[3]=0`) and 100% (`meta[4]=1`), 
+we need to input 12 (`meta[1]`) to have 10 bins in the view. 
+And the counts within each bin are not perfectly equal because of rounding and the nature of the data. 
+
+```{r}
+pmut.edap.cont(df, "carat", "price", meta=c(12,2,0,1), qbin=TRUE)
+```
+
+
+### pmut.edap
+
+This function creates visualization for a vector of features, using either `pmut.edap.disc()` or `pmut.edap.cont()`, 
+depending on the feature class. Columns of class `factor`, `character`, and `logical` will use `pmut.edap.disc()`; 
+Column of class `numeric` will use `pmut.edap.cont()`; 
+Column of class `integer` with unique values smaller than number of bins specified 
+by `meta` will use `pmut.edap.disc()`, otherwise use `pmut.edap.cont()`. 
+Some progression information will be printed on console.
+
+Same arguments as `pmut.edap.cont()` except `varvec`.
+
+`pmut.edap(datatable, varvec, targetstring, meta=c(50,4,0.01,0.99), qbin=FALSE, pred.df=NULL)`
+
+- **param** varvec: Vector of character indicating the column names inside `datatable` to productionalize the visulization
+
+```{r, eval=FALSE}
+# output the plots into a pdf file
+pdf("EDA_Diamonds.pdf", width=12, height=10)
+pmut.edap(df, names(df)[-7], "price")
+dev.off()
+```
+
+
+## Model Metric {#metrc}
+
+### pmut.auc
+
+This function calculates area under the ROC curve for prediction against actual, without any package dependency.
+
+`pmut.auc(aa, pp, plot=FALSE)`
+
+- **param** aa: Vector of actuals, could be non-binary, but all non-zero will be treated as TRUE
+- **param** pp: Vector of predictions, could be any value, probability is most ideal
+- **param** plot: Logical (defualt is FALSE), TRUE indicates plotting the auc curve
+- **return**: A single numeric value for auc
+
+```{r, fig.width=6, fig.height=5}
+actuals = c(1,1,1,1,0,1,1,0,1,0,1,0,1,0,0,1,0,0,0,0)
+predicts = rev(seq_along(actuals)); predicts[9:10] = mean(predicts[9:10])
+pmut.auc(actuals, predicts, plot=TRUE)
+```
+
+
+### pmut.gini
+
+This function calculates the standardized gini coefficient for prediction agianst actual.
+
+`pmut.gini(aa, pp, print=FALSE)`
+
+- **param** aa: Vector of actuals, could be any value
+- **param** pp: Vector of predictions, could be any value
+- **param** print: Logical (defualt is FALSE), TRUE indicates printing the original gini before standardization
+- **return**: A single numeric value for standardized gini
+
+```{r}
+pmut.gini(actuals, predicts, print=TRUE)
+```
+
+
+
+## Data Preparation for Scoring {#score}
+
+### pmut.base.find
+
+This function finds the meta information for each column within training data, 
+which will be used to process new data so that it can be scored without error, 
+check `pmut.base.prep()` for the preparation part. 
+Meta information for columns of class `factor`, `character`, and `logical` will form a list. 
+Each element of the list contains three slots: 1st `$VarString` is column name, 2nd `$LvlVec` is vector of unique levels, 
+3rd `$LvlBase` is base level name which is the level with most counts. 
+Meta information for columns of class `integer`, and `numeric` will form another list. 
+Each element of the list contains two slots: 1st `$VarString` is column name, 2nd `$ValueMean` is its value mean.
+
+`pmut.base.find(DATA)`
+
+- **param** DATA: Object of class `data.frame` or `data.table`
+- **return**: A list of two elements, 1st being meta information for categorical columns, 2nd for numeric columns
+
+
+### pmut.base.prep
+
+This function takes meta information generated by `pmut.base.find()`, prepares new data so that it can be scored without error. 
+It conducts a few things: it handles missing value imputation either by assigning to base level (categorical) or mean value (numeric); 
+it assigns levels not found in meta but observed in new data to base level; 
+it handles levels found in meta but not observed in new data by treating the column as `factor` then specifying the levels; 
+it handles entire column found in meta but not observed in new data by imputing the entire column with base level or mean value; 
+it attaches symbol "!" with every base level; lastly, it orders the columns alphabetically. 
+Note that data processed by this function will only have two classes: `factor` for categorical, `numeric` for numeric. 
+Then `model.matrix()` will produce data matrix with exactly identical format to be scored for a `glmnet` or `xgboost` model.
+
+`pmut.base.prep(DATA, CatMeta, NumMeta)`
+
+- **param** DATA: Object of class `data.frame` or `data.table`
+- **param** CatMeta: List of meta information for categorical features generated by `pmut.base.find`
+- **param** NumMeta: List of meta information for numeric features generated by `pmut.base.find`
+- **return**: A `data.frame` or `data.table` ready to be scored
+
+```{r}
+temp = pmut.base.find(data.frame(ggplot2::diamonds))
+# remove two columns
+newdata = data.frame(ggplot2::diamonds)[,-c(2,6)]
+# assign new color
+newdata$color = "NEW"
+# temp[[1]] categorical meta, temp[[2]] numeric meta 
+newdata = pmut.base.prep(newdata, temp[[1]], temp[[2]])
+head(newdata)
+sapply(newdata, class)
+```
+
+Note that attaching symbol "!" is to make sure that `model.matrix()` will remove same level when conducting dummy encoding for a categorical feature. 
+So after obtaining meta list from the training data with `pmut.base.find()`, 
+training data also needs to be processed by `pmut.base.prep()` before model fitting.
+
+
+
+## Simple Quality Check {#check}
+
+
+### pmut.data.pmis
+
+This function checks percenrage of NA (include empty string for character) inside each column of the data.
+
+`pmut.data.pmis(DATA)`
+
+- **param** DATA: Object of class `data.frame` or `data.table`
+- **return**: A named vector having percent of missing for the column
+
+```{r}
+pmut.data.pmis(data.frame(ggplot2::diamonds))
+```
+
+### pmut.data.same
+
+This function checks if there is any duplicated column inside the data.
+
+`pmut.data.same(DATA)`
+
+- **param** DATA: Object of class `data.frame` or `data.table`
+- **return**: A named bool vector indicating whether the column is duplicated
+
+```{r}
+pmut.data.same(data.frame(ggplot2::diamonds))
+```
+
+### pmut.data.scal
+
+This function standardizes numeric column inside the data.
+
+`pmut.data.scal(DATA)`
+
+- **param** DATA: Object of class `data.frame` or `data.table`
+- **return**: A `data.frame` or `data.table` after standardization
+
+```{r}
+head(pmut.data.scal(data.frame(ggplot2::diamonds)))
+```
+
+
+
+---------------
